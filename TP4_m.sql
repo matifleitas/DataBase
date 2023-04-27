@@ -131,3 +131,30 @@ mayores de edad que desempeñan tareas en departamentos de la misma y que posean
 menos 30 empleados.*/
 
 
+--------- EJERCICIO 2 ----------
+
+/*2.1 Muestre, para cada institución, su nombre y la cantidad de voluntarios que realizan
+aportes. Ordene el resultado por nombre de institución.*/
+
+SELECT i.id_institucion, nombre_institucion, v.nro_voluntario, v.apellido, t.nombre_tarea, t.id_tarea
+FROM unc_esq_voluntario.institucion i
+    INNER JOIN  unc_esq_voluntario.voluntario v
+    ON(i.id_institucion = v.id_institucion)
+        INNER JOIN unc_esq_voluntario.tarea t
+        ON(t.id_tarea = v.id_tarea)
+            ORDER BY nombre_institucion ASC
+
+/*2.2. Determine la cantidad de coordinadores en cada país, agrupados por nombre de
+país y nombre de continente. Etiquete la primer columna como 'Número de coordinadores' */
+
+SELECT v.id_coordinador, v.nombre, nombre_pais, nombre_continente
+FROM unc_esq_voluntario.continente c
+    INNER JOIN unc_esq_voluntario.pais p
+    ON (c.id_continente = p.id_continente)
+        INNER JOIN unc_esq_voluntario.direccion d
+        ON(p.id_pais = d.id_pais)
+            INNER JOIN unc_esq_voluntario.institucion i
+            ON(d.id_direccion = i.id_direccion)
+                INNER JOIN unc_esq_voluntario.voluntario v
+                ON (i.id_institucion = v.id_institucion)
+
