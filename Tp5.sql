@@ -52,7 +52,17 @@ update tp5_p1_ej2_proyecto set id_proyecto = 5 where id_proyecto = 2;
 --No se puede hacer el update ya que id_proyecto esta asociado a la tabla TRABAJA_EN al empleado 2 y a la tabla
 --AUSPICIO a McDonald;
 
---b)
+--B)
+/*
+Indique el resultado de la siguiente operaciones justificando su elección:
+UPDATE auspicio SET id_proyecto= 66, nro_empleado = 10
+    WHERE id_proyecto = 22
+        AND tipo_empleado = 'A'
+        AND nro_empleado = 5;
+*/
+--i.
+
+
 
 
 --d)
@@ -70,18 +80,11 @@ update tp5_p1_ej2_proyecto set id_proyecto = 5 where id_proyecto = 2;
     insert into unc_251672.tp5_p1_ej2_auspicio values (1, 'HP', null, 3); --no existe el empleado = 3
 
 --EJERCICIO 3
-
-
-
-
-
-
---EJERCICIO 4
 --1)a) No se puede. Ya esta registrada como foreign key en la tabla
 --b) F el alter table, tendria que ser nombrado en auto y en vez de conductor, ser contacto ya que en la tabla equipo
 -- no existe el atributo conductor
 --c) F ya que etapa no existe como atributo en la tabla etapa.
---d) F debido a que nro_auto, es primary key de auto y no de la tabla etapa.
+--d) F debido a que nro_auto, es primary key de auto y no de la tabla etapa. Ademas faltaria la pk de auto llamado id_equipo
 --e) V id_equipo es la primary key de la tabla equipo correctamente.
 --f) V id_equipo y nro_auto son claves correctas para aplicarse como fk en dempEtapa
 
@@ -146,12 +149,12 @@ CHECK (NOT EXISTS(
 
 --4)A)
     --TIPO - ATRIBUTO
-    ALTER TABLE unc_251672.p5p2e4_imagen_medica im
+    ALTER TABLE unc_251672.p5p2e4_imagen_medica
     ADD CONSTRAINT ck_valores_imagen_medica
-    CHECK ( im.modalidad IN (
+    CHECK ( modalidad IN (
             'RADIOLOGIA', 'CONVENCIONAL', 'FLUOROSCOPIA', 'ESTUDIOS RADIOGRAFICOS CON
-            FLUOROSCOPIA', 'MAMOGRAFIA', 'SONOGRAFIA',
-        ) );
+            FLUOROSCOPIA', 'MAMOGRAFIA', 'SONOGRAFIA'
+        ));
 
 --B)
     -- TIPO TABLA
@@ -250,5 +253,7 @@ CHECK (NOT EXISTS(
     CREATE ASSERTION OFERTA_SIN_DESCUENTO
     CHECK (NOT EXISTS (SELECT 1
                         FROM prenda p JOIN venta v ON (p.id_prenda = v.id_prenda)
-                        WHERE p.categoria = 'oferta' AND v.descuento IS NOT NULL));
+                        WHERE p.categoria = 'oferta' AND v.descuento IS NOT NULL)
+        );
+
 
