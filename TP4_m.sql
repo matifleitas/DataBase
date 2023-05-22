@@ -108,23 +108,28 @@ WHERE e.id_empleado IN ( --buscame eempleado.id_empleado que esten en ... y su i
 departamentos de Argentina y donde el jefe de departamento posee una comisión de más
 del 10% de la que posee su empleado a cargo.*/
 
-SELECT e.nombre, e.apellido, e.id_departamento, d.jefe_departamento
-FROM unc_esq_peliculas.empleado e
-    JOIN unc_esq_peliculas.departamento d
-    ON (e.id_departamento = d.id_departamento AND d.id_distribuidor = e.id_distribuidor) --ensamblar ambas PK de departamento
-        JOIN unc_esq_peliculas.empleado e2 ON (d.jefe_departamento = e2.id_empleado)  --empleado2 es una manera de llamar al JEFE ya que es un empleado
-        WHERE d.id_ciudad IN (SELECT c.id_ciudad
-                                FROM unc_esq_peliculas.ciudad c
-                                WHERE c.id_pais = 'AR')
-                                AND (e2.porc_comision) > (e.porc_comision*1.1);
+select e.nombre, e.apellido, p.nombre_pais
+from unc_esq_peliculas.empleado e
+join unc_esq_peliculas.departamento d on ( e.id_departamento = d.id_departamento and e.id_distribuidor = d.id_distribuidor)
+join unc_esq_peliculas.ciudad c on ( d.id_ciudad = c.id_ciudad)
+join unc_esq_peliculas.pais p on ( c.id_pais = p.id_pais) --busco empleados que tengan deptos en ARGENTINA
+where p.nombre_pais like 'ARGENTINA' and  --hago un exists donde el resultado sea de ARGENTINA
+                  EXISTS (
+                  select 1
+                  from unc_esq_peliculas.empleado e1 --e1 para referirnos a un jefe
+                   where (e1.porc_comision > ((e.porc_comision*1.1))) AND
+                   d.jefe_departamento = e1.id_empleado --verificamos que el jefe de departamento de cada departamento
+                );                                       --sea igual que el id de este empleado
 
-SELECT e.apellido, e.nombre, d.nombre, ej.nombre
-FROM unc_esq_peliculas.empleado e
-    JOIN unc_esq_peliculas.departamento d ON (d.id_departamento = e.id_departamento)and(d.id_distribuidor = e.id_distribuidor)
-        JOIN unc_esq_peliculas.ciudad c on (d.id_ciudad = c.id_ciudad)
-            JOIN unc_esq_peliculas.pais pa ON (c.id_pais = pa.id_pais)
-                JOIN unc_esq_peliculas.empleado ej ON (d.jefe_departamento = ej.id_empleado)
-WHERE (pa.nombre_pais = 'ARGENTINA') AND ((ej.porc_comision - e.porc_comision)> (e.porc_comision*0.1))
+-----------------------------
+SELECT e.nombre, e.apellido, e.id_departamento,e.id_distribuidor
+FROM unc_esq_peliculas.empleado e JOIN unc_esq_peliculas.departamento d ON (e.id_departamento = d.id_departamento AND e.id_distribuidor = d.id_distribuidor)
+JOIN unc_esq_peliculas.empleado e2 ON (d.jefe_departamento = e2.id_empleado)
+WHERE d.id_ciudad IN (SELECT c.id_ciudad
+                        FROM unc_esq_peliculas.ciudad c
+                        WHERE c.id_pais = 'AR')
+AND e2.porc_comision >(e.porc_comision*1.1);
+
 
 -------AGRUPAMIENTOS--------
 
@@ -153,12 +158,11 @@ mayores de edad que desempeñan tareas en departamentos de la misma y que posean
 menos 30 empleados.*/
 
 /*Manera correcta*/
-
-SELECT c.nombre_ciudad, count(*) as cantidad_de_empleados
+SELECT c.nombre_ciudad, COUNT(*) AS cantidad_de_empleados
     FROM unc_esq_peliculas.ciudad as c
-     JOIN unc_esq_peliculas.departamento d on c.id_ciudad = d.id_ciudad
-        JOIN unc_esq_peliculas.empleado e on d.id_distribuidor = e.id_distribuidor and d.id_departamento = e.id_departamento
-        WHERE EXTRACT(year FROM AGE(e.fecha_nacimiento)) > 18 --buscar empleados mayores de edad, sin filtros previos
+     JOIN unc_esq_peliculas.departamento d ON c.id_ciudad = d.id_ciudad
+        JOIN unc_esq_peliculas.empleado e ON d.id_distribuidor = e.id_distribuidor and d.id_departamento = e.id_departamento
+        WHERE EXTRACT(YEAR FROM AGE(e.fecha_nacimiento)) > 18 --buscar empleados mayores de edad, sin filtros previos
         AND (d.id_distribuidor, d.id_departamento) IN --IN devulve lo que sea igual a los id
                               (SELECT dep.id_distribuidor, dep.id_departamento --seleccionar devuelta para poder devolver
                                 FROM unc_esq_peliculas.departamento dep        --deptos que cumplan con el filtro
@@ -178,7 +182,7 @@ FROM unc_esq_voluntario.institucion i
     JOIN unc_esq_voluntario.voluntario v ON (i.id_institucion = v.id_institucion)
     GROUP BY i.nombre_institucion
     ORDER BY i.nombre_institucion;
-
+-------------------------------------
 SELECT DISTINCT i.nombre_institucion, count(v.nro_voluntario) AS cant_voluntarios_aportes
 FROM unc_esq_voluntario.institucion i
     JOIN unc_esq_voluntario.voluntario v ON i.id_institucion = v.id_institucion
@@ -211,10 +215,6 @@ FROM unc_esq_voluntario.voluntario v
 
 --NOC COMO HACERLO PARA QUE DEVUELVA EL NAME DE LA INSTITUCION
 
-SELECT v.apellido, v.nombre, v.fecha_nacimiento, i.nombre_institucion
-FROM unc_esq_voluntario.voluntario v
-    INNER JOIN unc_esq_voluntario.institucion i ON (v.id_institucion = i.id_institucion)
-    WHERE i.nombre_institucion = 'FUNDACION REGAZO' AND v.apellido NOT IN ('Zlotkey');
 
 /*2.4. Cree una consulta para mostrar los números de voluntarios y los apellidos de todos
 los voluntarios cuya cantidad de horas aportadas sea mayor que la media de las horas
