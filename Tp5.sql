@@ -7,10 +7,14 @@ CREATE TABLE matute_prueba (
 /* 1)a)Cómo debería implementar las Restricciones de Integridad Referencial (RIR) si se desea que cada vez que se elimine un
    registro de la tabla PALABRA , también se eliminen los artículos que la referencian en la tabla CONTIENE.*/
 
-ALTER TABLE unc_251672.p5p1e1_palabra  ADD CONSTRAINT FK_CONTIENE
+ALTER TABLE unc_251672.p5p1e1_contiene
+    ADD CONSTRAINT FK_CONTIENE_PALABRA
     FOREIGN KEY (idioma, cod_palabra)
-    REFERENCES unc_251672.p5p1e1_contiene (idioma, cod_palabra)
-    ON DELETE CASCADE;
+    REFERENCES unc_251672.p5p1e1_palabra (idioma, cod_palabra)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+    NOT DEFERRABLE
+    INITIALLY IMMEDIATE;
 
 /*Verifique qué sucede con las palabras contenidas en cada artículo, al eliminar una palabra,
 si definen la Acción Referencial para las bajas (ON DELETE) de la RIR correspondiente
@@ -18,8 +22,14 @@ como:
     ii) Restrict
     iii) Es posible para éste ejemplo colocar SET NULL o SET DEFAULT para ON
     DELETE y ON UPDATE?*/
+------------------------------------------------------------------------------------------------------
+--RESPUESTA:
+    --Definidas las RIR como ON DELETE RESTRICT para las palabras, evita que pueda efectuar el borrado de las mismas
+	--cuando estas esten referenciadas en la tabla CONTIENE.
 
-INSERT INTO unc_251672.p5p1e1_palabra (idioma, cod_palabra, descripcion) VALUES ('2', '445667', 'vb dsffsdffsdasdf jskodjk');
+	--Si defino la RIR como ON DELETE SET NULL deberia ocurrir un error ya que las palabras en la tabla contiene son PK, por lo tanto
+	--no podrian ser valores nulos.
+------------------------------------------------------------------------------------------------------
 
 /* 2)
 a) Indique el resultado de las siguientes operaciones, teniendo en cuenta las acciones
@@ -28,29 +38,103 @@ regla/s entra/n en conflicto y cuál es la causa. En caso de que sea aceptada, c
 resultado que produciría (NOTA: en cada caso considere el efecto sobre la instancia original de
 la BD, los resultados no son acumulativos).*/
 
+	-- tables
+	-- Table: TP5_P1_EJ2_AUSPICIO
+	CREATE TABLE TP5_P1_EJ2_AUSPICIO (
+		id_proyecto int  NOT NULL,
+		nombre_auspiciante varchar(20)  NOT NULL,
+		tipo_empleado char(2)  NULL,
+		nro_empleado int  NULL,
+		CONSTRAINT TP5_P1_EJ2_AUSPICIO_pk PRIMARY KEY (id_proyecto,nombre_auspiciante)
+	);
+
+	-- Table: TP5_P1_EJ2_EMPLEADO
+	CREATE TABLE TP5_P1_EJ2_EMPLEADO (
+		tipo_empleado char(2)  NOT NULL,
+		nro_empleado int  NOT NULL,
+		nombre varchar(40)  NOT NULL,
+		apellido varchar(40)  NOT NULL,
+		cargo varchar(15)  NOT NULL,
+		CONSTRAINT TP5_P1_EJ2_EMPLEADO_pk PRIMARY KEY (tipo_empleado,nro_empleado)
+	);
+
+	-- Table: TP5_P1_EJ2_PROYECTO
+	CREATE TABLE TP5_P1_EJ2_PROYECTO (
+		id_proyecto int  NOT NULL,
+		nombre_proyecto varchar(40)  NOT NULL,
+		anio_inicio int  NOT NULL,
+		anio_fin int  NULL,
+		CONSTRAINT TP5_P1_EJ2_PROYECTO_pk PRIMARY KEY (id_proyecto)
+	);
+
+	-- Table: TP5_P1_EJ2_TRABAJA_EN
+	CREATE TABLE TP5_P1_EJ2_TRABAJA_EN (
+		tipo_empleado char(2)  NOT NULL,
+		nro_empleado int  NOT NULL,
+		id_proyecto int  NOT NULL,
+		cant_horas int  NOT NULL,
+		tarea varchar(20)  NOT NULL,
+		CONSTRAINT TP5_P1_EJ2_TRABAJA_EN_pk PRIMARY KEY (tipo_empleado,nro_empleado,id_proyecto)
+	);
+
+	-- foreign keys
+	-- Reference: FK_TP5_P1_EJ2_AUSPICIO_EMPLEADO (table: TP5_P1_EJ2_AUSPICIO)
+	ALTER TABLE TP5_P1_EJ2_AUSPICIO ADD CONSTRAINT FK_TP5_P1_EJ2_AUSPICIO_EMPLEADO
+		FOREIGN KEY (tipo_empleado, nro_empleado)
+		REFERENCES TP5_P1_EJ2_EMPLEADO (tipo_empleado, nro_empleado)
+		MATCH FULL
+		ON DELETE  SET NULL
+		ON UPDATE  RESTRICT
+	;
+
+	-- Reference: FK_TP5_P1_EJ2_AUSPICIO_PROYECTO (table: TP5_P1_EJ2_AUSPICIO)
+	ALTER TABLE TP5_P1_EJ2_AUSPICIO ADD CONSTRAINT FK_TP5_P1_EJ2_AUSPICIO_PROYECTO
+		FOREIGN KEY (id_proyecto)
+		REFERENCES TP5_P1_EJ2_PROYECTO (id_proyecto)
+		ON DELETE  RESTRICT
+		ON UPDATE  RESTRICT
+	;
+
+	-- Reference: FK_TP5_P1_EJ2_TRABAJA_EN_EMPLEADO (table: TP5_P1_EJ2_TRABAJA_EN)
+	ALTER TABLE TP5_P1_EJ2_TRABAJA_EN ADD CONSTRAINT FK_TP5_P1_EJ2_TRABAJA_EN_EMPLEADO
+		FOREIGN KEY (tipo_empleado, nro_empleado)
+		REFERENCES TP5_P1_EJ2_EMPLEADO (tipo_empleado, nro_empleado)
+		ON DELETE  CASCADE
+		ON UPDATE  RESTRICT
+	;
+
+	-- Reference: FK_TP5_P1_EJ2_TRABAJA_EN_PROYECTO (table: TP5_P1_EJ2_TRABAJA_EN)
+	ALTER TABLE TP5_P1_EJ2_TRABAJA_EN ADD CONSTRAINT FK_TP5_P1_EJ2_TRABAJA_EN_PROYECTO
+		FOREIGN KEY (id_proyecto)
+		REFERENCES TP5_P1_EJ2_PROYECTO (id_proyecto)
+		ON DELETE  RESTRICT
+		ON UPDATE  CASCADE
+	;
+
 --b.1)
 delete from tp5_p1_ej2_proyecto where id_proyecto = 3;
---INSERT INTO unc_251672.tp5_p1_ej2_proyecto (id_proyecto, nombre_proyecto, anio_inicio, anio_fin) VALUES ('3', 'Proy 3', '2020', NULL);
+-- Se pudo ejecutar correctamente el DELETE. Se borra la linea que contenga id_proyecto = 3.
 
 --b.2)
 update tp5_p1_ej2_proyecto set id_proyecto = 3 where id_proyecto = 7;
+-- Se pudo ejecutar correctamente el UPDATE. Se modifica el id_proyecto = 3 a id_proyecto = 7.
 
 --b.3)
 delete from tp5_p1_ej2_proyecto where id_proyecto = 1;
---No se puede borrar porque en la tabla "trbaja_en" ya esta seteado el id_proyecto = 1, no deberia haber registros
---referenciados a id_proyecto = 1 para que se pueda realizar;
+--No se puede borrar porque en la tabla "trbaja_en" ya esta seteado el id_proyecto = 1, viola la restriccion ON DELETE RESTRICT.
 
 --b.4)
 delete from tp5_p1_ej2_empleado where tipo_empleado = 'A' and nro_empleado = 2;
---INSERT INTO tp5_p1_ej2_empleado VALUES ('A ', 2, 'María', 'Casio', 'CIO');
+--Se puede eliminar el empleado, se eliminara tambien de la tabla tp5_p1_ej2_trabaja_en y en la tabla
+--tp5_p1_ej2_auspicio se colocan ambos valores en null. MIRAR LOS ARTER TABLES DE LAS TABLAS PARA RESOLVER
 
 --b.5)
 update tp5_p1_ej2_trabaja_en set id_proyecto = 1 where id_proyecto =3;
+--Se pudo modificar id_proyecto. Ya que el id_proyecto = 3 existe en la tabla tp5_p1_ej2_proyecto.
 
 --b.6)
 update tp5_p1_ej2_proyecto set id_proyecto = 5 where id_proyecto = 2;
---No se puede hacer el update ya que id_proyecto esta asociado a la tabla TRABAJA_EN al empleado 2 y a la tabla
---AUSPICIO a McDonald;
+--No se puede hacer el update ya que id_proyecto esta referido como restrict a la tabla AUSPICIO a McDonald;
 
 --B)
 /*
@@ -60,26 +144,28 @@ UPDATE auspicio SET id_proyecto= 66, nro_empleado = 10
         AND tipo_empleado = 'A'
         AND nro_empleado = 5;
 */
---i.
 
-
-
+--El resultado, es la primera ya que es UPDATE RESTRICT en la constraint FK_TP5_P1_EJ2_AUSPICIO_EMPLEADO
 
 --d)
 --.a)
-    insert into unc_251672.tp5_p1_ej2_auspicio values (1, 'Dell' , 'B', null); --es rechazada, B (tipo_empleado) existe pero
-    --viola la fk que en la tabla empleado debe existir un nro de empleado para que se pueda insertar en auspicio
+    insert into unc_251672.tp5_p1_ej2_auspicio values (1, 'Dell' , 'B', null);
+    --SIMPLE, PARCIAL
 
 --.b)
-    insert into unc_251672.tp5_p1_ej2_auspicio values (2, 'Oracle', null, null); --matching full
+    insert into unc_251672.tp5_p1_ej2_auspicio values (2, 'Oracle', null, null);
+    --FULL, SIMPLE, PARCIAL
 
 --.c)
-    insert into unc_251672.tp5_p1_ej2_auspicio values (3, 'Google', 'A', 3); --no existe el empleado = 3
+    insert into unc_251672.tp5_p1_ej2_auspicio values (3, 'Google', 'A', 3);
+    --SIMPLE, PARCIAL
 
 --.d)
-    insert into unc_251672.tp5_p1_ej2_auspicio values (1, 'HP', null, 3); --no existe el empleado = 3
+    insert into unc_251672.tp5_p1_ej2_auspicio values (1, 'HP', null, 3);
+    --SIMPLE
 
 --EJERCICIO 3
+
 --1)a) No se puede. Ya esta registrada como foreign key en la tabla
 --b) F el alter table, tendria que ser nombrado en auto y en vez de conductor, ser contacto ya que en la tabla equipo
 -- no existe el atributo conductor
