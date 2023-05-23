@@ -7,6 +7,10 @@ CREATE TABLE matute_prueba (
 /* 1)a)Cómo debería implementar las Restricciones de Integridad Referencial (RIR) si se desea que cada vez que se elimine un
    registro de la tabla PALABRA , también se eliminen los artículos que la referencian en la tabla CONTIENE.*/
 
+--Primero dropear constraint configurada
+ALTER TABLE DROP CONSTRAINT fk_p5p1e1_contiene_palabra;
+
+--Asignar constraint
 ALTER TABLE unc_251672.p5p1e1_contiene
     ADD CONSTRAINT FK_CONTIENE_PALABRA
     FOREIGN KEY (idioma, cod_palabra)
