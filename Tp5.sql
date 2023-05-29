@@ -179,16 +179,152 @@ UPDATE auspicio SET id_proyecto= 66, nro_empleado = 10
 --f) V id_equipo y nro_auto son claves correctas para aplicarse como fk en dempEtapa
 
 
-
-
 --TP5-PARTE_2
+
+--EJERCICIO 1
+--A --DOMINIIO -- No puede haber voluntarios de más de 70 años.
+ALTER TABLE unc_esq_voluntarios
+ADD CONSTRAINT ck_fecha_nacimiento
+CHECK( NOT EXISTS (
+		SELECT 1
+		FROM unc_esq_voluntario.voluntario v
+		WHERE extract(YEAR FROM(age(v.fecha_nacimiento))) <= '70'
+		));
+
+--B --DOMINIO -- Ningún voluntario puede aportar más horas que las de su coordinador.
+ALTER TABLE unc_esq_voluntarios
+ADD CONSTRAINT ck_horas_voluntario_coordinador
+CHECK( NOT EXISTS (
+		 SELECT 1
+		 FROM voluntario v JOIN FROM voluntario v2 ON (v.nro_voluntario=v2.nro_voluntario)
+		 	WHERE v.horas_aportadas > v2.horas_aportadas
+		 )));
+
+--C --GENERAL -- Las horas aportadas por los voluntarios deben estar dentro de los valores máximos y
+              -- mínimos consignados en la tarea.
+CREATE ASSERTION horas_validas
+CHECK ( NOT EXISTS (
+		SELECT 1
+		FROM voluntario v
+		JOIN tarea t ON (v.id_tarea=t.id_tarea)
+		WHERE v.horas_aportadas < t.min_horas OR v.horas_aportadas > max_horas
+	))
+
+--D --TABLA -- Todos los voluntarios deben realizar la misma tarea que su coordinador.
+ALTER TABLE voluntarios v
+ADD CONSTRAINT ck_misma_tarea
+CHECK( NOT EXISTS (
+		SELECT 1 FROM
+		FROM voluntario v JOIN voluntario v2 ON (v.nro_voluntario=v2.id_coordinador)
+		WHERE v2.id_tarea <> v.id_tarea
+));
+
+--E --TABLA -- Los voluntarios no pueden cambiar de institución más de tres veces en el año.
+ALTER TABLE
+ADD CONSTRAINT ck_MAX_POR_ANIO
+CHECK( NOT EXISTS (
+		SELECT 1
+		FROM historico h
+		GROUP BY h.nro_voluntario, h.fecha_inicio
+		HAVING COUNT(h.id_institucion) > 3
+));
+
+--F --TABLA -- En el histórico, la fecha de inicio debe ser siempre menor que la fecha de finalización.
+ALTER TABLE historico
+ADD CONSTRAINT ck_fecha_inicio
+CHECK( NOT EXISTS (
+		SELECT 1
+		FROM historico h
+		WHERE h.fecha_inicio < h.fecha_fin
+))
+
+--EJERCICIO 2
+--A --TABLA -- Para cada tarea el sueldo máximo debe ser mayor que el sueldo mínimo.
+ALTER TABLE tarea
+ADD CONSTRAINT ck_max_de_tarea
+CHECK( NOT EXISTS (
+		SELECT 1
+		FROM tarea t
+		WHERE t.sueldo_maximo < t.sueldo_min
+));
+
+--B --DOMINIO -- No puede haber más de 70 empleados en cada departamento.
+ALTER TABLE empleado
+ADD CONSTRAINT ck_max_emp_departamentos
+CHECK( NOT EXISTS(
+		SELECT 1
+		FROM unc_esq_peliculas.empleado e
+		GROUP BY e.id_departamento
+		HAVING COUNT(e.id_departamento) > '70'
+));
+
+--C --DOMINIO -- Los empleados deben tener jefes que pertenezcan al mismo departamento.
+ALTER TABLE jefes
+ADD CONSTRAINT ck_mismo_depto
+CHECK ( NOT EXISTS(
+                SELECT 1
+                FROM unc_esq_peliculas.empleado e
+                JOIN unc_esq_peliculas.empleado e2 on (e.id_empleado = e2.id_jefe)
+                WHERE e2.
+) )
+
+ALTER TABLE empleado
+ADD CONSTRAINT ck_mismo_jefe_departamento
+CHECK( NOT EXISTS (
+		SELECT 1
+		FROM unc_esq_peliculas.empleado e
+		JOIN unc_esq_peliculas.empleado e2 ON (e.id_empleado = e2.id_jefe)
+		WHERE e.id_departamento <> e2.id_departamento --Simbolo <>, es un (No es igual a)
+));
+
+--D --DOMINIO -- Todas las entregas, tienen que ser de películas de un mismo idioma.
+CREATE ASSERTION ck_mismo_idioma
+CHECK ( NOT EXISTS(
+		SELECT 1
+		FROM unc_esq_peliculas.entrega e
+		JOIN r_entrega r ON (e.nro_entrega = r.nro_entrega)
+            JOIN pelicula p ON (r.nro_entrega=p.codigo_peliicula)
+            GROUP BY r.nro_entrega
+            HAVING COUNT((r.idioma)>1
+));
+
+--E -- No pueden haber más de 10 empresas productoras por ciudad.
+ALTER TABLE ciudad
+ADD CONSTRAINT ck_misma_ciudad
+CHECK ( NOT EXISTS(
+		SELECT 1
+		FROM ciudad c
+		GROUP BY c.id_ciudad
+		HAVING COUNT (*) > 10	//es con *, pq se necesita devolver las peliculas completas
+));
+
+--F -- Para cada película, si el formato es 8mm, el idioma tiene que ser francés.
+ALTER TABLE pelicula
+ADD CONSTRAINT ck_formato
+CHECK ( NOT EXISTS(
+		SELECT 1
+		FROM pelicula p
+		WHERE (p.formato = '8mm') <> (p.idioma = 'frances')
+));
+
+--G --GENERAL
+-- El teléfono de los distribuidores Nacionales debe tener la misma característica que la de su
+-- distribuidor mayorista.
+CREATE ASSERTION ck_caracteristica
+CHECK (NOT EXISTS(
+            SELECT 1
+            FROM unc_esq_voluntario.nacional n
+            JOIN unc_esq_voluntario.distribuidor d ON (d.id_distribuidor=n.id_distribuidor_mayorista)--d, lo asigno como distribuidor mayorista
+            JOIN unc_esq_voluntario.distribuidor d2 ON (d.id_distribuidor=n.id_distribuidor)--d2, lo asigno como distribuidor nacional normal
+            WHERE (d.tipo = 'N') AND "left"(d.telefono, 3)<>"left"(d2.telefono,3)
+));
 
 --3)A)
 -- A. Controlar que las nacionalidades sean 'Argentina' 'Español' 'Inglés' 'Alemán' o 'Chilena'.
 -- TIPO - check atributo = dominio
       ALTER TABLE unc_251672.p5p1e1_articulo
       ADD CONSTRAINT ck_articulo_nacionalidad
-      CHECK (nacionalidad IN ( --NO ESTA CREADO EL ATRIBUTO NACIONALIDAD EN LA TABLA ARTICULO
+      CHECK (nacionalidad IN (  --NO ESTA CREADO EL ATRIBUTO NACIONALIDAD EN LA TABLA ARTICULO
           'Argentina', 'Español', 'Inglés', 'Alemán', 'Chilena'
           ));
 
@@ -238,7 +374,9 @@ CHECK (NOT EXISTS(
     );
 
 --4)A)
-    --TIPO - ATRIBUTO
+    --TIPO - ATRIBUTO --La modalidad de la imagen médica puede tomar los siguientes valores RADIOLOGIA
+    --CONVENCIONAL, FLUOROSCOPIA, ESTUDIOS RADIOGRAFICOS CON
+    --FLUOROSCOPIA, MAMOGRAFIA, SONOGRAFIA,
     ALTER TABLE unc_251672.p5p2e4_imagen_medica
     ADD CONSTRAINT ck_valores_imagen_medica
     CHECK ( modalidad IN (
@@ -246,8 +384,9 @@ CHECK (NOT EXISTS(
             FLUOROSCOPIA', 'MAMOGRAFIA', 'SONOGRAFIA'
         ));
 
---B)
+--B) --Cada imagen no debe tener más de 5 procesamientos.
     -- TIPO TABLA
+
     ALTER TABLE unc_251672.p5p2e4_procesamiento
     ADD CONSTRAINT ck_limite_imagenes
     CHECK ( NOT EXISTS(
@@ -259,6 +398,9 @@ CHECK (NOT EXISTS(
 
 --C)
     --TIPO GENERAL
+    --Agregue dos atributos de tipo fecha a las tablas Imagen_medica y Procesamiento, una
+    --indica la fecha de la imagen y la otra la fecha de procesamiento de la imagen y controle
+    --que la segunda no sea menor que la primera.
     ALTER TABLE unc_251672.p5p2e4_imagen_medica --Esta es la sintaxsis de agregacion de columnas
     ADD COLUMN fecha_imagen date;
 
@@ -268,44 +410,38 @@ CHECK (NOT EXISTS(
     CREATE ASSERTION
     CHECK (
         NOT EXISTS( SELECT 1
-                    FROM imagen_medica i JOIN procesamiento p
-                    ON ((i.id_paciente = p.id_paciente) AND (i.id_imagen = p.id_imagen))
-                    WHERE i.fecha_imagen > p.fecha_procesamiento
+                    FROM imagen_medica i
+                    JOIN procesamiento p ON ((i.id_paciente = p.id_paciente) AND (i.id_imagen = p.id_imagen))
+                    WHERE i.fecha_imagen < p.fecha_procesamiento
     );
 
 --D)
+--Cada paciente sólo puede realizar dos FLUOROSCOPIA anuales.
     ALTER TABLE unc_251672.p5p2e4_imagen_medica
     ADD CONSTRAINT ck_limite_procesamientos
     CHECK (NOT EXISTS(
             SELECT 1
             FROM imagen_medica
             WHERE (modalidad LIKE 'FLUOROSCOPIA')
-            GROUP BY id_paciente, EXTRACT(YEAR FROM fecha_img)
-            HAVING (*) > 2
+            GROUP BY id_paciente, EXTRACT(YEAR FROM fecha_img)--agrupe por paciente y por año de la img_medica
+            HAVING COUNT (*) > 2
         ));
 
-   ALTER TABLE p5p2e4_imagen_medica
-   ADD CONSTRAINT CK_CANTIDAD_PROCESAMIENTOS
-   CHECK ( NOT EXISTS (
-                SELECT 1
-                FROM p5p2e4_imagen_medica
-                WHERE modalidad = 'FLUOROSCOPIA'
-                GROUP BY id_paciente, extract(year from fecha_img)
-                HAVING COUNT(*) > 2 ))
-;
-
 --E)
-    CREATE ASSERTION ASDAS
-    CHECK (NOT EXISTS (
-                SELECT 1
-                FROM algoritmo a
-                WHERE costo_computacional = 'O(n)'
-                AND id_algoritmo IN (SELECT 1
-                                     FROM procesamiento p JOIN imagen_medica i
-                                     ON ((p.id_paciente = i.id_paciente) AND (i.id_imagen = p.id_imagen))
-                                     WHERE i.modalidad = 'FLUOROSCOPIA'
-                                    )
-    ));
+--No se pueden aplicar algoritmos de costo computacional “O(n)” a imágenes de FLUOROSCOPIA
+
+    CREATE ASSERTION aplicar_algoritmos
+    CHECK( NOT EXISTS(
+            SELECT 1
+            FROM p5p2e4_algoritmo a
+            WHERE a.costo_computacional = 'O(n)'
+            AND a.id_algoritmo IN ( --buscar los procesamientos con 'O(n)' de algoritmo
+                                SELECT 1
+                                FROM p5p2e4_procesamiento p JOIN p5p2e4_imagen_medica i
+                                ON (p.id_paciente = i.id_paciente) AND (p.id_imagen=i.id_imagen)
+                                WHERE i.modalidad = 'FLUOROSCOPIA'
+            )
+    ))
     ---
     CREATE ASSERTION
        CHECK ( NOT EXISTS (
@@ -313,10 +449,8 @@ CHECK (NOT EXISTS(
                     FROM p5p2e4_imagen_medica i JOIN p5p2e4_procesamiento p ON
                     (i.id_paciente = p.id_paciente AND i.id_imagen = p.id_imagen)
                     JOIN p5p2e4_algoritmo a ON ( p.id_algoritmo = a.id_algoritmo )
-                    WHERE modalidad = 'FLUOROSCOPIA' AND
-                    costo_computacional = 'O(n)'
+                    WHERE i.modalidad = 'FLUOROSCOPIA' AND a.costo_computacional = 'O(n)'
 ));
-
 
 --5)-A)
         ALTER TABLE venta
@@ -325,18 +459,27 @@ CHECK (NOT EXISTS(
             (BETWEEN 0 AND 100)));
 
 --B)
---TABLA
-    ALTER TABLE VENTA
-    ADD CONSTRAINT  CK_DESCUENTO_FECHA
+--GENERAL
+--Los descuentos realizados en fechas de liquidación deben superar el 30%.
+    ALTER TABLE p5p2e5_venta
+    ADD CONSTRAINT ck_descuentos
     CHECK ( NOT EXISTS(
-                SELECT 1
-                FROM p5p2e5_venta
-                GROUP BY descuento, EXTRACT(YEAR FROM fecha)
-                HAVING COUNT(*) < 30
-    ));
+        SELECT 1
+        FROM venta v, fecha_liq fl
+            WHERE v.fecha BETWEEN to_date(fl.dia_liq '/' || fl.mes_liq ||'/'||extract(year from v.fecha), 'dd/mm/yyyy')
+            AND (to_date(fl.dia_liq '/' || fl.mes_liq ||'/'||extract(year from v.fecha), 'dd/mm/yyyy') + fl.cant_dias)
+            AND v.descuento < 30
+    ) );
 
 --C)
-    ALTER TABLE
+    ALTER TABLE p5p2e5_fecha_liq
+    ADD constraint ck_julio_diciembre
+    CHECK ( NOT EXISTS(
+                    SELECT 1
+                    FROM fecha_liq f
+                    WHERE (f.mes_liq LIKE 6 AND cant_dias > 5 ) OR --Se aplica el OR pq lo tengo que hacer mal
+                    (f.mes_liq LIKE 12 AND cant_dias > 5)          --por el NOT EXISTS
+    ) )
 
 
 --D)
